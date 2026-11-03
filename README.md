@@ -1,5 +1,5 @@
 # Syncdian
-![foto demo](https://imgur.com/a/zTcrWCa)
+[Imgur](https://imgur.com/uH9RD1m)
 
 ### Background Synchronizer from Obsidian to Google Drive
 
