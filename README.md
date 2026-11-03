@@ -1,5 +1,5 @@
 # Syncdian
-<img src="https://i.imgur.com/uH9RD1m.png" alt="Texto alternativo" width="300" />
+<img src="https://i.imgur.com/uH9RD1m.png" alt="Texto alternativo" width="700" />
 
 ### Background Synchronizer from Obsidian to Google Drive
 
