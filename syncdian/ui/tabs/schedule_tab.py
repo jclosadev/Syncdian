@@ -1,11 +1,13 @@
-from PySide6.QtCore import Qt, Signal, QTime
+from PySide6.QtCore import Signal, QTime
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QTimeEdit, QComboBox, QMessageBox
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame,
+    QTimeEdit, QComboBox, QMessageBox
 )
 
 from syncdian.config import get_config
 from syncdian.constants import SCHEDULE_DAILY, SCHEDULE_INTERVAL
+from syncdian.i18n import tr
+from syncdian.ui.icons import get_icon, ICON_COLOR_ACTIVE
 from syncdian.ui.widgets.setting_row import SettingRow
 from syncdian.ui.widgets.toggle_switch import ToggleSwitch
 
@@ -20,7 +22,7 @@ class ScheduleTab(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setContentsMargins(28, 24, 28, 24)
         layout.setSpacing(16)
 
         # Contenedor estilo tarjeta de Obsidian
@@ -30,15 +32,15 @@ class ScheduleTab(QWidget):
         card_layout.setContentsMargins(8, 8, 8, 8)
         card_layout.setSpacing(0)
 
-        # Fila 1: Toggle Switch de programación (Idéntico a la imagen)
+        # Fila 1: Toggle de programación
         self.toggle_enable = ToggleSwitch(checked=self.config_manager.schedule.enabled)
         self.toggle_enable.toggled.connect(self._on_toggle_enabled)
-        row_enabled = SettingRow(
-            title="Sincronización Automática Programada",
-            description="Si lo desactiva, el servicio en segundo plano pausará las copias recurrentes.",
+        self.row_enabled = SettingRow(
+            title=tr("sched_auto_title"),
+            description=tr("sched_auto_desc"),
             action_widget=self.toggle_enable
         )
-        card_layout.addWidget(row_enabled)
+        card_layout.addWidget(self.row_enabled)
 
         # Fila 2: Hora fija diaria (21:00)
         self.time_picker = QTimeEdit()
@@ -49,23 +51,20 @@ class ScheduleTab(QWidget):
         except Exception:
             self.time_picker.setTime(QTime(21, 0))
         self.time_picker.setFixedWidth(110)
-        row_time = SettingRow(
-            title="Hora de Copia Diaria Recurrente",
-            description="Hora programada en la que Syncdian empaquetará y subirá tus notas a Google Drive.",
-            link_text="Por defecto configurado todos los días a las 21:00.",
+        self.row_time = SettingRow(
+            title=tr("sched_time_title"),
+            description=tr("sched_time_desc"),
+            link_text=tr("sched_time_link"),
             action_widget=self.time_picker
         )
-        card_layout.addWidget(row_time)
+        card_layout.addWidget(self.row_time)
 
-        # Fila 3: Modo de frecuencia (ComboBox como el de Idioma en la imagen)
+        # Fila 3: Modo de frecuencia
         self.freq_combo = QComboBox()
-        self.freq_combo.addItem("Diaria (a la hora fija elegida)", SCHEDULE_DAILY)
-        self.freq_combo.addItem("Repetir cada 2 horas", 2)
-        self.freq_combo.addItem("Repetir cada 4 horas", 4)
-        self.freq_combo.addItem("Repetir cada 6 horas", 6)
-        self.freq_combo.addItem("Repetir cada 12 horas", 12)
-        self.freq_combo.addItem("Repetir cada 24 horas", 24)
-        self.freq_combo.setFixedWidth(230)
+        self.freq_combo.addItem(tr("sched_freq_daily"), SCHEDULE_DAILY)
+        for hours in (2, 4, 6, 12, 24):
+            self.freq_combo.addItem(tr("sched_freq_hours", h=hours), hours)
+        self.freq_combo.setFixedWidth(240)
 
         if self.config_manager.schedule.mode == SCHEDULE_INTERVAL:
             idx = self.freq_combo.findData(self.config_manager.schedule.interval_hours)
@@ -74,36 +73,66 @@ class ScheduleTab(QWidget):
         else:
             self.freq_combo.setCurrentIndex(0)
 
-        row_freq = SettingRow(
-            title="Frecuencia de Respaldo",
-            description="Elige entre una copia diaria única o repetición a intervalos regulares.",
+        self.row_freq = SettingRow(
+            title=tr("sched_freq_title"),
+            description=tr("sched_freq_desc"),
             action_widget=self.freq_combo
         )
-        card_layout.addWidget(row_freq)
+        card_layout.addWidget(self.row_freq)
 
-        # Fila 4: Ejecutar al inicio (Toggle Switch)
+        # Fila 4: Ejecutar al inicio
         self.toggle_startup_sync = ToggleSwitch(checked=self.config_manager.schedule.run_on_startup)
-        row_startup = SettingRow(
-            title="Copia Inmediata al Iniciar Syncdian",
-            description="Realiza una verificación y respaldo al abrir el programa o arrancar Windows.",
+        self.row_startup = SettingRow(
+            title=tr("sched_startup_title"),
+            description=tr("sched_startup_desc"),
             action_widget=self.toggle_startup_sync
         )
-        card_layout.addWidget(row_startup)
+        card_layout.addWidget(self.row_startup)
 
         layout.addWidget(card)
-
         layout.addStretch()
 
-        # Botón Guardar (Dorado/Ámbar Obsidian)
+        # Botón Guardar
         btn_box = QHBoxLayout()
         btn_box.addStretch()
-        save_btn = QPushButton("Guardar Programación")
-        save_btn.setObjectName("primaryButton")
-        save_btn.clicked.connect(self._save_schedule)
-        btn_box.addWidget(save_btn)
+        self.save_btn = QPushButton(tr("sched_save_btn"))
+        self.save_btn.setObjectName("primaryButton")
+        self.save_btn.setIcon(get_icon("save", 15, ICON_COLOR_ACTIVE))
+        self.save_btn.clicked.connect(self._save_schedule)
+        btn_box.addWidget(self.save_btn)
         layout.addLayout(btn_box)
 
         self._on_toggle_enabled(self.toggle_enable.isChecked())
+
+    def retranslate(self):
+        self.row_enabled.set_texts(
+            title=tr("sched_auto_title"),
+            description=tr("sched_auto_desc"),
+        )
+        self.row_time.set_texts(
+            title=tr("sched_time_title"),
+            description=tr("sched_time_desc"),
+            link_text=tr("sched_time_link"),
+        )
+        self.row_freq.set_texts(
+            title=tr("sched_freq_title"),
+            description=tr("sched_freq_desc"),
+        )
+        self.row_startup.set_texts(
+            title=tr("sched_startup_title"),
+            description=tr("sched_startup_desc"),
+        )
+        self.save_btn.setText(tr("sched_save_btn"))
+
+        # Actualizar las opciones del desplegable conservando la selección
+        self.freq_combo.blockSignals(True)
+        for i in range(self.freq_combo.count()):
+            data = self.freq_combo.itemData(i)
+            if data == SCHEDULE_DAILY:
+                self.freq_combo.setItemText(i, tr("sched_freq_daily"))
+            else:
+                self.freq_combo.setItemText(i, tr("sched_freq_hours", h=data))
+        self.freq_combo.blockSignals(False)
 
     def _on_toggle_enabled(self, enabled: bool):
         self.time_picker.setEnabled(enabled)
@@ -129,6 +158,6 @@ class ScheduleTab(QWidget):
 
         QMessageBox.information(
             self,
-            "Programación Guardada",
-            "La programación ha sido actualizada y aplicada al servicio en segundo plano."
+            tr("sched_saved_title"),
+            tr("sched_saved_msg")
         )

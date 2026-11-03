@@ -1,138 +1,147 @@
-# Syncdian
-<img src="https://i.imgur.com/uH9RD1m.png" alt="Texto alternativo" width="700" />
+# Syncdian 🚀
+### Sincronizador en segundo plano de Obsidian a Google Drive
 
-### Background Synchronizer from Obsidian to Google Drive
+**Syncdian** es una aplicación de escritorio para Windows diseñada para mantener tus notas y *vaults* de **Obsidian** respaldados de forma continua, automática y segura en **Google Drive**.
 
-**Syncdian** is a Windows desktop application designed to keep your **Obsidian** notes and vaults continuously, automatically, and securely backed up to **Google Drive**.
-
-It runs silently in the background (in the System Tray next to the Windows clock) and performs scheduled backups based on your preferences (for example, **every day at 21:00** or at periodic intervals).
+Se ejecuta silenciosamente en segundo plano (en la bandeja del sistema / *System Tray* junto al reloj de Windows) y realiza copias programadas según tus preferencias (por ejemplo, **todos los días a las 21:00** o por intervalos periódicos).
 
 ---
 
-## Key Features
+## ✨ Características Principales
 
-1. **Silent Background Service**:
-   - Lives in the System Tray.
-   - Does not interfere with your workflow while writing in Obsidian.
-   - If you close the main window, it continues running in the background to perform backups at the scheduled time.
+1. **Servicio Silencioso en Segundo Plano**:
+   - Vive en la bandeja del sistema (*System Tray*).
+   - No interfiere con tu flujo de trabajo mientras escribes en Obsidian.
+   - Si cierras la ventana principal, continúa ejecutándose en segundo plano para realizar las copias a la hora programada.
 
-2. **Flexible Recurrent Scheduling**:
-   - **Daily at a fixed time**: Configurable to the exact hour you choose (for example, every day at **21:00**).
-   - **By intervals**: Every 1h, 2h, 4h, 6h, 12h, 24h.
-   - **On-demand manual synchronization**: *"Sync Now"* button to back up changes instantly.
+2. **Programación Recurrente Flexible**:
+   - **Diaria a una hora fija**: Configurable a la hora exacta que elijas (por ejemplo, todos los días a las **21:00**).
+   - **Por intervalos**: Cada 1h, 2h, 4h, 6h, 12h, 24h.
+   - **Sincronización manual bajo demanda**: Botón *"Sincronizar Ahora"* para respaldar cambios al instante.
 
-3. **Secure and Versioned Backups**:
-   - **ZIP Snapshots (Recommended)**: Packages your vault with timestamp (`MyVault_2026-11-03_21-00-00.zip`). If you delete notes by mistake or a file gets corrupted, you can restore the exact state from any previous day.
-   - **Automatic Retention Policy**: Automatically cleans up older backups on Google Drive while keeping the specified number of versions (e.g., last 10 copies) to avoid cluttering your storage space.
-   - **Smart Exclusion Filters**: Default filtering to ignore unnecessary files such as `.trash`, `.git`, cache, and temporary files.
+3. **Respaldos Seguros y Versionados**:
+   - **Snapshots ZIP (Recomendado)**: Empaqueta tu bóveda con fecha y hora (`MiVault_2026-11-03_21-00-00.zip`). Si borras notas por error o se corrompe un archivo, puedes restaurar exactamente el estado de cualquier día anterior.
+   - **Mirror Sync**: Sube los archivos y carpetas del vault directamente a Google Drive replicando su estructura, ideal para consultar tus notas desde cualquier dispositivo sin descomprimir nada.
+   - **Política de Retención Automática**: Limpia automáticamente en Google Drive las copias más antiguas conservando el número de versiones que elijas (ej. últimas 10 copias) para no saturar tu espacio de almacenamiento.
+   - **Filtros Inteligentes de Exclusión**: Omite por defecto archivos innecesarios como `.trash`, `.git`, memorias caché y temporales.
 
-4. **Automatic Obsidian Vault Detection**:
-   - Automatically reads your local Obsidian configuration to suggest and add your vaults with a single click.
+4. **Detección Automática de Bóvedas de Obsidian**:
+   - Lee automáticamente tu configuración local de Obsidian para sugerirte y añadir tus bóvedas con un solo clic.
 
-5. **Official Google Drive API Integration**:
-   - Secure OAuth 2.0 flow via browser.
-   - Restricted scope (`drive.file`): Syncdian only has access to the backups and folders it creates in your Drive, guaranteeing the privacy of your other personal documents.
+5. **Integración Oficial con la API de Google Drive**:
+   - Flujo OAuth 2.0 seguro mediante navegador.
+   - Ámbito restringido (`drive.file`): Syncdian solo tiene acceso a las copias y carpetas que crea en tu Drive, garantizando la privacidad de tus demás documentos personales.
 
-6. **Auto-Start with Windows**:
-   - Option to launch minimized automatically when turning on your PC.
+6. **Inicio Automático con Windows**:
+   - Opción para arrancar minimizado automáticamente al encender el PC.
 
-7. **Multilingual Support (Spanish / English)**:
-   - Real-time language selector within the application (Spanish and English). Switching languages instantly updates all menus, buttons, notifications, and settings, remembering your choice.
+7. **Soporte Multilingüe (Español / Inglés)**:
+   - Selector de idioma en tiempo real en **Acerca De** (Español e Inglés). Al cambiarlo, todos los menús, botones, notificaciones y opciones se actualizan al instante y recuerdan tu elección.
+
+8. **Interfaz Oscura Inspirada en Obsidian**:
+   - Paleta cálida, tipografía y controles al estilo Obsidian, con iconos de línea y detalles en ámbar.
 
 ---
 
-## How to Launch the Application
+## 🚀 Cómo Iniciar la Aplicación
 
-You can launch Syncdian directly using its executable or shortcut files:
+Puedes iniciar Syncdian directamente mediante su ejecutable o los accesos directos:
 
-- **`Syncdian.exe`**: Standalone compiled Windows executable ready to run with a double-click.
-- **`Iniciar_Syncdian.bat`**: Shortcut to launch the application.
-- **`Iniciar_Syncdian_Consola.bat`**: Launches the application showing debug messages in a console window.
+- **`dist\Syncdian.exe`**: Ejecutable compilado independiente de Windows listo para abrir con doble clic.
+- **`Iniciar_Syncdian.bat`**: Acceso directo para iniciar la aplicación (usa el `.exe` de `dist` o Python).
+- **`Iniciar_Syncdian_Consola.bat`**: Inicia la aplicación mostrando los mensajes de depuración en una ventana de consola.
 
-Or via command line:
+O mediante línea de comandos:
 ```bash
-.\Syncdian.exe
+.\dist\Syncdian.exe
 ```
 
 ---
 
-## ☁️ Setting Up Google Drive Connection (Step-by-Step)
+## ☁️ Configurar la Conexión con Google Drive (Paso a Paso)
 
-To connect Syncdian with your Google Drive account, you need your free credentials from the Google API:
+Para conectar Syncdian con tu cuenta de Google Drive necesitas tus credenciales gratuitas de la API de Google:
 
-1. **Access Google Cloud Console**:
-   - Go to [https://console.cloud.google.com/](https://console.cloud.google.com/) and log in with your Google account.
-2. **Create a Project**:
-   - In the top bar, click on the project selector and then click **"New Project"**.
-   - Name it **"Syncdian"** and click **Create**.
-3. **Enable Google Drive API**:
-   - In the left sidebar menu (☰), go to **APIs & Services** > **Library**.
-   - Search for **"Google Drive API"**, select it, and click **Enable**.
-4. **OAuth Consent Screen**:
-   - In **APIs & Services**, go to **OAuth consent screen**.
-   - User Type: Select **External** and click **Create**.
-   - Fill in the *App name* (e.g., `Syncdian`) and your email address. Click *Save and Continue*.
-   - In the **Test users** step, add your own Gmail address. Click *Save and Continue*.
-5. **Create Desktop Credentials**:
-   - Go to **APIs & Services** > **Credentials**.
-   - Click **+ Create Credentials** > **OAuth client ID**.
-   - Application type: Select **Desktop app**.
-   - Name: `Syncdian Desktop`.
-   - Click **Create**.
-6. **Link with Syncdian**:
-   - Click **Download JSON** (you will get a file like `client_secret_xxx.json`).
-   - Open Syncdian, navigate to the **Google Drive** tab, and select your JSON file (or copy and paste the *Client ID* and *Client Secret*).
-   - Click **"Sign in with Google"**. Your browser will open to grant permissions.
-   - Done! Your account will be permanently saved and authorized.
-
----
-
-## How to Restore a Backup
-
-1. In your Google Drive, you will find a folder named **`Syncdian Obsidian Backups`**.
-2. Inside, there will be a folder for each of your vaults.
-3. To restore:
-   - Download the `.zip` file from your desired date.
-   - Extract the contents into your vault directory or a new folder.
-   - Open Obsidian and select *"Open folder as vault"*. All your notes, plugins, settings, and links will be intact!
+1. **Entra a Google Cloud Console**:
+   - Ve a [https://console.cloud.google.com/](https://console.cloud.google.com/) e inicia sesión con tu cuenta de Google.
+2. **Crea un Proyecto**:
+   - En la barra superior, haz clic en el selector de proyectos y luego en **"Nuevo proyecto"**.
+   - Nómbralo **"Syncdian"** y haz clic en **Crear**.
+3. **Habilita la API de Google Drive**:
+   - En el menú lateral izquierdo (☰), ve a **APIs y servicios** > **Biblioteca**.
+   - Busca **"Google Drive API"**, selecciónala y pulsa **Habilitar**.
+4. **Pantalla de Consentimiento de OAuth**:
+   - En **APIs y servicios**, ve a **Pantalla de consentimiento de OAuth**.
+   - Tipo de usuario: Selecciona **Externo** y pulsa **Crear**.
+   - Rellena el *Nombre de la app* (ej. `Syncdian`) y tu correo electrónico. Pulsa *Guardar y continuar*.
+   - En el paso **Usuarios de prueba**, añade tu propio correo de Gmail. Pulsa *Guardar y continuar*.
+5. **Crear Credenciales de Escritorio**:
+   - Ve a **APIs y servicios** > **Credenciales**.
+   - Haz clic en **+ Crear credenciales** > **ID de cliente de OAuth**.
+   - Tipo de aplicación: Selecciona **App de escritorio** (Desktop app).
+   - Nombre: `Syncdian Desktop`.
+   - Pulsa **Crear**.
+6. **Vincular en Syncdian**:
+   - Haz clic en **Descargar JSON** (obtendrás un archivo similar a `client_secret_xxx.json`).
+   - Abre Syncdian, ve a la pestaña **Google Drive** y selecciona tu archivo JSON (o copia y pega el *Client ID* y *Client Secret*).
+   - Haz clic en **"Iniciar Sesión en Google"**. Se abrirá tu navegador para aceptar los permisos.
+   - ¡Listo! Tu cuenta quedará guardada y autorizada de forma permanente.
 
 ---
 
-## 🛠️ Project Structure
+## 📂 ¿Cómo Restaurar una Copia de Seguridad?
+
+1. En tu Google Drive encontrarás la carpeta llamada **`Syncdian Obsidian Backups`**.
+2. Dentro habrá una carpeta para cada una de tus bóvedas.
+3. Para restaurar:
+   - Descarga el archivo `.zip` de la fecha que desees.
+   - Descomprime el contenido en la carpeta de tu vault o en una nueva carpeta.
+   - Abre Obsidian y selecciona *"Abrir carpeta como bóveda"*. ¡Todas tus notas, plugins, configuraciones y enlaces estarán intactos!
+
+---
+
+## 🛠️ Estructura del Proyecto
 
 ```
 Syncdian/
 │
-├── main.py                     # Entry point of the application
-├── requirements.txt            # Python dependencies
-├── Iniciar_Syncdian.bat        # Shortcut to launch without console
-├── Iniciar_Syncdian_Consola.bat# Shortcut to launch with console
-├── README.md                   # This guide
+├── main.py                     # Punto de entrada de la aplicación
+├── requirements.txt            # Dependencias de Python
+├── Iniciar_Syncdian.bat        # Acceso directo para iniciar sin consola
+├── Iniciar_Syncdian_Consola.bat# Acceso directo para iniciar con consola
+├── README.md                   # Esta guía
 │
 ├── syncdian/
-│   ├── constants.py            # AppData paths, scopes, and constants
-│   ├── config.py               # Persistent configuration manager
+│   ├── constants.py            # Rutas en AppData, ámbitos y constantes
+│   ├── config.py               # Gestor de configuración persistente
+│   ├── i18n.py                 # Traducciones completas Español / Inglés
 │   │
 │   ├── core/
-│   │   ├── vault_manager.py    # Vault auto-detection and ZIP packaging
-│   │   ├── gdrive.py           # Official connection and Google Drive API uploads
-│   │   ├── scheduler.py        # Background recurring scheduler
-│   │   ├── sync_engine.py      # Backup execution engine
-│   │   └── autostart.py        # Windows startup integration
+│   │   ├── vault_manager.py    # Auto-detección de vaults y empaquetado ZIP
+│   │   ├── gdrive.py           # Conexión oficial y subida a Google Drive API
+│   │   ├── scheduler.py        # Programador recurrente en segundo plano
+│   │   ├── sync_engine.py      # Motor de respaldos (Snapshot ZIP y Mirror)
+│   │   └── autostart.py        # Integración con el inicio de Windows
 │   │
 │   └── ui/
-│       ├── theme.py            # Dark visual theme inspired by Obsidian
-│       ├── main_window.py      # Main desktop window
-│       ├── tray_icon.py        # System tray icon and context menu
+│       ├── theme.py            # Tema visual oscuro inspirado en Obsidian
+│       ├── icons.py            # Iconos SVG de línea estilo Flaticon/Lucide
+│       ├── main_window.py      # Ventana principal de escritorio
+│       ├── tray_icon.py        # Icono y menú de la bandeja del sistema
+│       ├── widgets/            # Filas de ajustes y conmutadores estilo Obsidian
 │       └── tabs/
-│           ├── dashboard_tab.py# Summary, metrics, and sync button
-│           ├── vaults_tab.py   # Vault management and auto-detection
-│           ├── schedule_tab.py # Recurring schedules (e.g., 21:00)
-│           ├── gdrive_tab.py   # Google Drive account setup
-│           ├── history_tab.py  # History log and live console
-│           └── settings_tab.py # Autostart settings and exclusions
+│           ├── dashboard_tab.py# Resumen, métricas y botón de sincronizar
+│           ├── vaults_tab.py   # Gestión y auto-detección de bóvedas
+│           ├── schedule_tab.py # Horarios recurrentes (ej. 21:00)
+│           ├── gdrive_tab.py   # Configuración de cuenta de Google Drive
+│           ├── history_tab.py  # Historial y consola en vivo
+│           ├── settings_tab.py # Ajustes de autostart y exclusiones
+│           └── about_tab.py    # Información y selector de idioma
 │
 └── tests/
-    ├── test_core.py            # Unit tests for compression and configuration
-    └── test_ui.py              # UI initialization unit tests
+    ├── test_core.py            # Pruebas unitarias de compresión y configuración
+    ├── test_i18n.py            # Comprobación de traducciones Español/Inglés
+    ├── test_mirror.py          # Pruebas del modo Mirror sin conexión real
+    └── test_ui.py              # Pruebas de inicialización de la interfaz
 ```
+

@@ -9,6 +9,7 @@ from syncdian.config import get_config, VaultConfig, SyncHistoryRecord
 from syncdian.constants import MODE_SNAPSHOT_ZIP, MODE_MIRROR_SYNC
 from syncdian.core.gdrive import GoogleDriveService
 from syncdian.core.vault_manager import VaultManager
+from syncdian.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -44,25 +45,25 @@ class SyncEngine:
         enabled_vaults = [v for v in self.config_manager.vaults if v.enabled]
         
         if not enabled_vaults:
-            self._log("No hay ningún vault de Obsidian configurado o habilitado para sincronizar.")
-            return {"status": "skipped", "message": "No hay vaults habilitados"}
+            self._log(tr("sync_no_vaults"))
+            return {"status": "skipped", "message": tr("sync_no_vaults")}
 
         if not self.gdrive.is_authenticated():
-            err_msg = "Google Drive no está conectado o la sesión ha expirado."
+            err_msg = tr("sync_not_authenticated")
             self._log(f"ERROR: {err_msg}")
             return {"status": "error", "message": err_msg}
 
-        self._log(f"Iniciando sincronización de {len(enabled_vaults)} vault(s)...")
+        self._log(tr("sync_starting", count=len(enabled_vaults)))
         results = []
 
         total_vaults = len(enabled_vaults)
         for idx, vault in enumerate(enabled_vaults):
             if self._is_cancelled:
-                self._log("Sincronización cancelada por el usuario.")
+                self._log(tr("sync_cancelled"))
                 break
 
             base_percent = (idx / total_vaults) * 100.0
-            self._log(f"--- Procesando Vault [{idx+1}/{total_vaults}]: {vault.name} ---")
+            self._log(tr("sync_processing_vault", current=idx + 1, total=total_vaults, name=vault.name))
 
             res = self.sync_single_vault(
                 vault,
@@ -71,7 +72,7 @@ class SyncEngine:
             )
             results.append(res)
 
-        self._update_progress(100.0, "Sincronización finalizada.")
+        self._update_progress(100.0, tr("sync_finished"))
         return {"status": "done", "results": results}
 
     def sync_single_vault(
@@ -86,7 +87,7 @@ class SyncEngine:
 
         vault_path = Path(vault.path)
         if not vault_path.exists():
-            err = f"La carpeta del vault '{vault.path}' no existe en el disco."
+            err = tr("sync_error_vault_missing", path=vault.path)
             self._log(f"ERROR: {err}")
             vault.last_status = "failed"
             vault.last_error = err
@@ -100,7 +101,7 @@ class SyncEngine:
             root_folder_name = self.config_manager.google_drive.root_folder_name or "Syncdian Obsidian Backups"
             self._update_progress(
                 current_base_percent + 5.0 * step_progress_weight,
-                f"Verificando carpeta en Google Drive ({root_folder_name})..."
+                tr("sync_verifying_folder", name=root_folder_name)
             )
             root_id = self.gdrive.get_or_create_folder(root_folder_name)
             self.config_manager.google_drive.root_folder_id = root_id
@@ -112,17 +113,17 @@ class SyncEngine:
             exclusions = self.config_manager.settings.exclude_patterns
 
             # 2. Modo Snapshot ZIP
-            if vault.backup_mode == MODE_SNAPSHOT_ZIP or True:  # Por defecto y más seguro
+            if vault.backup_mode == MODE_SNAPSHOT_ZIP:
                 self._update_progress(
                     current_base_percent + 15.0 * step_progress_weight,
-                    f"Comprimiendo vault '{vault.name}'..."
+                    tr("sync_compressing_vault", name=vault.name)
                 )
 
                 def zip_cb(current, total, cur_file):
                     pct = 15.0 + (current / max(total, 1)) * 35.0
                     self._update_progress(
                         current_base_percent + pct * step_progress_weight,
-                        f"Comprimiendo [{current}/{total}]: {Path(cur_file).name}"
+                        tr("sync_compressing_file", current=current, total=total, file=Path(cur_file).name)
                     )
 
                 temp_zip, total_files, zip_size = VaultManager.create_vault_zip_snapshot(
@@ -133,7 +134,11 @@ class SyncEngine:
                 )
 
                 # 3. Subida a Google Drive
-                self._log(f"Subiendo {temp_zip.name} ({zip_size / 1024 / 1024:.2f} MB) a Google Drive...")
+                self._log(tr(
+                    "sync_uploading_file",
+                    name=temp_zip.name,
+                    size=f"{zip_size / 1024 / 1024:.2f}"
+                ))
 
                 def upload_cb(progress, uploaded_bytes, total_bytes):
                     pct = 50.0 + (progress * 40.0)
@@ -141,7 +146,12 @@ class SyncEngine:
                     mb_tot = total_bytes / (1024 * 1024)
                     self._update_progress(
                         current_base_percent + pct * step_progress_weight,
-                        f"Subiendo a Google Drive: {mb_up:.1f}MB / {mb_tot:.1f}MB ({int(progress*100)}%)"
+                        tr(
+                            "sync_uploading_progress",
+                            uploaded=f"{mb_up:.1f}",
+                            total=f"{mb_tot:.1f}",
+                            percent=int(progress * 100)
+                        )
                     )
 
                 upload_res = self.gdrive.upload_file_resumable(
@@ -158,7 +168,7 @@ class SyncEngine:
                     keep_count=vault.retention_count
                 )
                 if deleted_old > 0:
-                    self._log(f"Política de retención: Se limpiaron {deleted_old} copias antiguas.")
+                    self._log(tr("sync_retention_cleanup", count=deleted_old))
 
                 duration = time.time() - start_time
                 vault.last_status = "success"
@@ -166,8 +176,13 @@ class SyncEngine:
                 vault.last_error = None
                 self.config_manager.update_vault(vault)
 
-                success_msg = f"Copia completada con éxito ({total_files} archivos, {zip_size / 1024 / 1024:.2f} MB en {duration:.1f}s)"
-                self._log(f"ÉXITO: {vault.name} -> {success_msg}")
+                success_msg = tr(
+                    "sync_success_message",
+                    files=total_files,
+                    size=f"{zip_size / 1024 / 1024:.2f}",
+                    duration=f"{duration:.1f}"
+                )
+                self._log(f"OK: {vault.name} -> {success_msg}")
                 self._record_history(vault, "success", total_files, zip_size, duration, success_msg)
 
                 return {
@@ -179,11 +194,22 @@ class SyncEngine:
                     "drive_file_id": upload_res.get("id")
                 }
 
+            # 2b. Modo Mirror (subida directa de archivos y carpetas)
+            return self._sync_mirror_vault(
+                vault=vault,
+                vault_path=vault_path,
+                vault_folder_id=vault_folder_id,
+                exclusions=exclusions,
+                start_time=start_time,
+                step_progress_weight=step_progress_weight,
+                current_base_percent=current_base_percent,
+            )
+
         except Exception as e:
             duration = time.time() - start_time
-            err_msg = f"Error durante la sincronización: {str(e)}"
+            err_msg = tr("sync_error_generic", error=str(e))
             logger.exception(err_msg)
-            self._log(f"ERROR en {vault.name}: {err_msg}")
+            self._log(tr("sync_error_vault_prefix", name=vault.name, error=err_msg))
             vault.last_status = "failed"
             vault.last_error = str(e)
             self.config_manager.update_vault(vault)
@@ -197,6 +223,84 @@ class SyncEngine:
                     temp_zip.unlink()
                 except Exception as e:
                     logger.debug(f"No se pudo borrar zip temporal {temp_zip}: {e}")
+
+    def _sync_mirror_vault(
+        self,
+        vault: VaultConfig,
+        vault_path: Path,
+        vault_folder_id: str,
+        exclusions: List[str],
+        start_time: float,
+        step_progress_weight: float,
+        current_base_percent: float,
+    ) -> Dict[str, Any]:
+        """Sube la estructura de archivos del vault directamente a Drive (modo Mirror)."""
+        try:
+            files, total_size = VaultManager.scan_vault(vault_path, exclusions)
+            total_files = len(files)
+            uploaded_files = 0
+
+            for index, file_path in enumerate(files, 1):
+                if self._is_cancelled:
+                    self._log(tr("sync_cancelled"))
+                    break
+
+                rel_path = file_path.relative_to(vault_path)
+                parent_id = vault_folder_id
+
+                # Crear (o reutilizar) las carpetas intermedias en Google Drive
+                for part in rel_path.parent.parts:
+                    if part not in (".", ""):
+                        parent_id = self.gdrive.get_or_create_folder(part, parent_id=parent_id)
+
+                percent = 10.0 + (index / max(total_files, 1)) * 85.0
+                file_size_mb = file_path.stat().st_size / (1024 * 1024)
+                self._update_progress(
+                    current_base_percent + percent * step_progress_weight,
+                    tr("sync_uploading_file", name=rel_path.as_posix(), size=f"{file_size_mb:.2f}")
+                )
+                self.gdrive.upload_file_resumable(
+                    local_path=file_path,
+                    parent_id=parent_id,
+                    custom_name=file_path.name
+                )
+                uploaded_files += 1
+
+            duration = time.time() - start_time
+            vault.last_status = "success"
+            vault.last_sync = datetime.now().isoformat()
+            vault.last_error = None
+            self.config_manager.update_vault(vault)
+
+            success_msg = tr(
+                "sync_success_message",
+                files=uploaded_files,
+                size=f"{total_size / 1024 / 1024:.2f}",
+                duration=f"{duration:.1f}"
+            )
+            self._log(f"OK: {vault.name} -> {success_msg}")
+            self._record_history(
+                vault, "success", uploaded_files, total_size, duration, success_msg
+            )
+
+            return {
+                "vault": vault.name,
+                "status": "success",
+                "files": uploaded_files,
+                "size_bytes": total_size,
+                "duration": duration,
+            }
+
+        except Exception as e:
+            duration = time.time() - start_time
+            err_msg = tr("sync_error_generic", error=str(e))
+            logger.exception(err_msg)
+            self._log(tr("sync_error_vault_prefix", name=vault.name, error=err_msg))
+            vault.last_status = "failed"
+            vault.last_error = str(e)
+            self.config_manager.update_vault(vault)
+            self._record_history(vault, "failed", 0, 0, duration, err_msg)
+            return {"vault": vault.name, "status": "failed", "error": str(e)}
 
     def _record_history(
         self,

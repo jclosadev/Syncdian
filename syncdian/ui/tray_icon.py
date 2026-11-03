@@ -1,16 +1,16 @@
-import os
 from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu
 
 from syncdian.constants import APP_DISPLAY_NAME
 from syncdian.i18n import tr
+from syncdian.ui.icons import get_icon
 
 
 def create_default_app_icon() -> QIcon:
-    """Retorna el icono oficial de Syncdian o genera uno por código si no existe."""
-    # Buscar icon.ico o icon.png en assets o ruta frozen
+    """Devuelve el icono oficial de Syncdian o genera uno por código si no existe."""
     base_dir = Path(__file__).resolve().parent.parent.parent
     ico_path = base_dir / "assets" / "icon.ico"
     png_path = base_dir / "assets" / "icon.png"
@@ -49,7 +49,7 @@ class SyncdianTrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setIcon(create_default_app_icon())
-        self.setToolTip(f"{APP_DISPLAY_NAME}")
+        self.setToolTip(APP_DISPLAY_NAME)
         self.init_menu()
         self.activated.connect(self._on_tray_activated)
 
@@ -57,17 +57,21 @@ class SyncdianTrayIcon(QSystemTrayIcon):
         self.tray_menu = QMenu()
 
         self.open_action = self.tray_menu.addAction(tr("tray_open"))
+        self.open_action.setIcon(get_icon("folder_open", 16, "#d8ccbe"))
         self.open_action.triggered.connect(self.open_window_requested.emit)
 
         self.sync_action = self.tray_menu.addAction(tr("tray_sync_now"))
+        self.sync_action.setIcon(get_icon("sync", 16, "#d8ccbe"))
         self.sync_action.triggered.connect(self.sync_now_requested.emit)
 
         self.schedule_action = self.tray_menu.addAction(tr("tray_pause_sched"))
+        self.schedule_action.setIcon(get_icon("schedule", 16, "#d8ccbe"))
         self.schedule_action.triggered.connect(self.toggle_schedule_requested.emit)
 
         self.tray_menu.addSeparator()
 
         self.quit_action = self.tray_menu.addAction(tr("tray_quit"))
+        self.quit_action.setIcon(get_icon("x", 16, "#e88c7c"))
         self.quit_action.triggered.connect(self.quit_requested.emit)
 
         self.setContextMenu(self.tray_menu)
@@ -75,7 +79,9 @@ class SyncdianTrayIcon(QSystemTrayIcon):
     def retranslate_menu(self, schedule_enabled: bool = True):
         self.open_action.setText(tr("tray_open"))
         self.sync_action.setText(tr("tray_sync_now"))
-        self.schedule_action.setText(tr("tray_pause_sched") if schedule_enabled else tr("tray_resume_sched"))
+        self.schedule_action.setText(
+            tr("tray_pause_sched") if schedule_enabled else tr("tray_resume_sched")
+        )
         self.quit_action.setText(tr("tray_quit"))
 
     def _on_tray_activated(self, reason):

@@ -1,13 +1,15 @@
-import os
 from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal, QThread
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QFileDialog, QLineEdit, QMessageBox, QTabWidget
+    QFrame, QFileDialog, QLineEdit, QMessageBox
 )
 
 from syncdian.config import get_config
 from syncdian.core.gdrive import GoogleDriveService
+from syncdian.i18n import tr
+from syncdian.ui.icons import get_icon, ICON_COLOR, ICON_COLOR_ACTIVE
 from syncdian.ui.widgets.setting_row import SettingRow
 
 
@@ -42,31 +44,57 @@ class GoogleDriveTab(QWidget):
         self.config_manager = get_config()
         self.gdrive = gdrive_service
         self.auth_worker = None
+        self._storage_info_cache = None
         self.init_ui()
 
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(24, 20, 24, 20)
+        self.main_layout.setContentsMargins(28, 24, 28, 24)
         self.main_layout.setSpacing(16)
 
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(16)
         self.main_layout.addWidget(self.content_widget)
 
         self.main_layout.addStretch()
         self.refresh_status_view()
 
+    def retranslate(self):
+        self.refresh_status_view()
+
     def refresh_status_view(self):
+        # Conservar los valores escritos por el usuario al cambiar de idioma.
+        current_view = getattr(self, "_current_view", None)
+        saved_json = self.json_path_edit.text() if current_view == "disconnected" else ""
+        saved_cid = self.client_id_edit.text() if current_view == "disconnected" else ""
+        saved_csecret = self.client_secret_edit.text() if current_view == "disconnected" else ""
+        saved_folder = self.folder_name_edit.text() if current_view == "connected" else ""
+
         while self.content_layout.count() > 0:
             item = self.content_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+            widget = item.widget()
+            if widget:
+                widget.setParent(None)
+                widget.deleteLater()
 
         if self.gdrive.is_authenticated():
             self._build_connected_view()
+            self._current_view = "connected"
         else:
             self._build_disconnected_view()
+            self._current_view = "disconnected"
+
+        if self._current_view == "disconnected":
+            if saved_json:
+                self.json_path_edit.setText(saved_json)
+            if saved_cid:
+                self.client_id_edit.setText(saved_cid)
+            if saved_csecret:
+                self.client_secret_edit.setText(saved_csecret)
+        elif saved_folder:
+            self.folder_name_edit.setText(saved_folder)
 
     def _build_connected_view(self):
         card = QFrame()
@@ -76,33 +104,48 @@ class GoogleDriveTab(QWidget):
         card_l.setSpacing(0)
 
         # Fila Estado y Desconexión
-        disc_btn = QPushButton("Desconectar Cuenta")
+        disc_btn = QPushButton(tr("gdrive_disconnect"))
         disc_btn.setObjectName("dangerButton")
+        disc_btn.setIcon(get_icon("unplug", 14, "#e88c7c"))
         disc_btn.clicked.connect(self._disconnect)
 
-        user_email = self.config_manager.google_drive.user_email or "Cuenta Conectada"
+        user_email = self.config_manager.google_drive.user_email or tr("gdrive_account_connected")
         row_status = SettingRow(
-            title="Cuenta de Google Drive Vinculada",
-            description=f"Sesión activa como: {user_email}",
-            link_text="Google Drive API conectada de forma segura (ámbito: drive.file).",
+            title=tr("gdrive_acc_title"),
+            description=tr("gdrive_acc_desc", email=user_email),
+            link_text=tr("gdrive_api_scope"),
             action_widget=disc_btn
         )
         card_l.addWidget(row_status)
 
-        # Fila Almacenamiento
-        try:
-            info = self.gdrive.get_account_info()
-            usage_mb = info.get("storage_usage_bytes", 0) / (1024 * 1024)
-            limit_mb = (info.get("storage_limit_bytes", 0) or 0) / (1024 * 1024)
-            storage_text = f"{usage_mb/1024:.2f} GB de {limit_mb/1024:.2f} GB" if limit_mb > 0 else f"{usage_mb/1024:.2f} GB usados"
-        except Exception:
-            storage_text = "Disponible"
+        # Fila Almacenamiento (datos cacheados para que el cambio de idioma sea instantáneo)
+        if self._storage_info_cache is None:
+            try:
+                info = self.gdrive.get_account_info()
+                self._storage_info_cache = {
+                    "used_gb": info.get("storage_usage_bytes", 0) / (1024 ** 3),
+                    "limit_gb": (info.get("storage_limit_bytes") or 0) / (1024 ** 3),
+                }
+            except Exception:
+                self._storage_info_cache = {"used_gb": None, "limit_gb": None}
+
+        cache = self._storage_info_cache
+        if cache["used_gb"] is None:
+            storage_text = tr("gdrive_storage_available")
+        elif cache["limit_gb"]:
+            storage_text = tr(
+                "gdrive_storage_of",
+                used=f"{cache['used_gb']:.2f}",
+                total=f"{cache['limit_gb']:.2f}",
+            )
+        else:
+            storage_text = tr("gdrive_storage_used", used=f"{cache['used_gb']:.2f}")
 
         storage_lbl = QLabel(storage_text)
-        storage_lbl.setStyleSheet("color: #df9b20; font-weight: bold;")
+        storage_lbl.setObjectName("selectorBadge")
         row_storage = SettingRow(
-            title="Espacio de Almacenamiento",
-            description="Uso actual de almacenamiento en tu cuenta de Google Drive.",
+            title=tr("gdrive_storage_title"),
+            description=tr("gdrive_storage_desc"),
             action_widget=storage_lbl
         )
         card_l.addWidget(row_storage)
@@ -111,16 +154,20 @@ class GoogleDriveTab(QWidget):
         folder_box = QWidget()
         fb_l = QHBoxLayout(folder_box)
         fb_l.setContentsMargins(0, 0, 0, 0)
-        self.folder_name_edit = QLineEdit(self.config_manager.google_drive.root_folder_name or "Syncdian Obsidian Backups")
-        self.folder_name_edit.setFixedWidth(200)
-        save_folder_btn = QPushButton("Guardar")
+        fb_l.setSpacing(8)
+        self.folder_name_edit = QLineEdit(
+            self.config_manager.google_drive.root_folder_name or "Syncdian Obsidian Backups"
+        )
+        self.folder_name_edit.setFixedWidth(210)
+        save_folder_btn = QPushButton(tr("gdrive_save_folder"))
+        save_folder_btn.setIcon(get_icon("save", 14, ICON_COLOR))
         save_folder_btn.clicked.connect(self._update_folder_name)
         fb_l.addWidget(self.folder_name_edit)
         fb_l.addWidget(save_folder_btn)
 
         row_folder = SettingRow(
-            title="Carpeta Destino en Drive",
-            description="Nombre de la carpeta principal creada en tu Google Drive donde se guardarán los vaults.",
+            title=tr("gdrive_folder_title"),
+            description=tr("gdrive_folder_desc"),
             action_widget=folder_box
         )
         card_l.addWidget(row_folder)
@@ -138,22 +185,25 @@ class GoogleDriveTab(QWidget):
         file_box = QWidget()
         fb_l = QHBoxLayout(file_box)
         fb_l.setContentsMargins(0, 0, 0, 0)
+        fb_l.setSpacing(8)
         self.json_path_edit = QLineEdit()
-        self.json_path_edit.setPlaceholderText("Ruta a credentials.json...")
-        self.json_path_edit.setFixedWidth(220)
-        browse_btn = QPushButton("Examinar...")
+        self.json_path_edit.setPlaceholderText(tr("gdrive_json_placeholder"))
+        self.json_path_edit.setFixedWidth(210)
+        browse_btn = QPushButton(tr("dlg_browse"))
+        browse_btn.setIcon(get_icon("folder_open", 14, ICON_COLOR))
         browse_btn.clicked.connect(self._browse_credentials_file)
-        connect_json_btn = QPushButton("Conectar")
+        connect_json_btn = QPushButton(tr("gdrive_connect_btn"))
         connect_json_btn.setObjectName("primaryButton")
+        connect_json_btn.setIcon(get_icon("link", 14, ICON_COLOR_ACTIVE))
         connect_json_btn.clicked.connect(self._auth_via_json)
         fb_l.addWidget(self.json_path_edit)
         fb_l.addWidget(browse_btn)
         fb_l.addWidget(connect_json_btn)
 
         row_json = SettingRow(
-            title="Vincular con credentials.json",
-            description="Carga el archivo de credenciales de escritorio descargado de Google Cloud Console.",
-            link_text="Opción recomendada y más rápida.",
+            title=tr("gdrive_json_title"),
+            description=tr("gdrive_json_desc"),
+            link_text=tr("gdrive_json_link"),
             action_widget=file_box
         )
         card_l.addWidget(row_json)
@@ -162,24 +212,26 @@ class GoogleDriveTab(QWidget):
         keys_box = QWidget()
         kb_l = QVBoxLayout(keys_box)
         kb_l.setContentsMargins(0, 0, 0, 0)
+        kb_l.setSpacing(6)
         self.client_id_edit = QLineEdit()
         self.client_id_edit.setPlaceholderText("Client ID")
-        self.client_id_edit.setFixedWidth(280)
+        self.client_id_edit.setFixedWidth(290)
         self.client_id_edit.setText(self.config_manager.google_drive.client_id)
         self.client_secret_edit = QLineEdit()
         self.client_secret_edit.setPlaceholderText("Client Secret")
         self.client_secret_edit.setEchoMode(QLineEdit.Password)
-        self.client_secret_edit.setFixedWidth(280)
+        self.client_secret_edit.setFixedWidth(290)
         self.client_secret_edit.setText(self.config_manager.google_drive.client_secret)
-        btn_keys = QPushButton("Iniciar Sesión con Claves")
+        btn_keys = QPushButton(tr("gdrive_keys_btn"))
+        btn_keys.setIcon(get_icon("shield", 14, ICON_COLOR))
         btn_keys.clicked.connect(self._auth_via_keys)
         kb_l.addWidget(self.client_id_edit)
         kb_l.addWidget(self.client_secret_edit)
         kb_l.addWidget(btn_keys)
 
         row_keys = SettingRow(
-            title="Vincular con Client ID y Secret",
-            description="Ingresa manualmente tus identificadores de cliente de OAuth.",
+            title=tr("gdrive_keys_title"),
+            description=tr("gdrive_keys_desc"),
             action_widget=keys_box
         )
         card_l.addWidget(row_keys)
@@ -190,24 +242,24 @@ class GoogleDriveTab(QWidget):
         guide_card = QFrame()
         guide_card.setObjectName("obsidianCard")
         g_layout = QVBoxLayout(guide_card)
-        g_layout.setContentsMargins(16, 16, 16, 16)
-        g_layout.setSpacing(10)
+        g_layout.setContentsMargins(18, 16, 18, 16)
+        g_layout.setSpacing(8)
 
-        g_title = QLabel("📖 Pasos para obtener tus credenciales en Google Cloud Console:")
-        g_title.setStyleSheet("font-weight: 600; color: #df9b20; font-size: 13px;")
-        g_layout.addWidget(g_title)
+        g_head = QHBoxLayout()
+        g_icon = QLabel()
+        g_icon.setPixmap(get_icon("globe", 16, "#e2a01b").pixmap(16, 16))
+        g_title = QLabel(tr("gdrive_guide_title"))
+        g_title.setObjectName("accentLabel")
+        g_head.addWidget(g_icon)
+        g_head.addWidget(g_title)
+        g_head.addStretch()
+        g_layout.addLayout(g_head)
 
-        guide_text = (
-            "1. Abre <a style='color: #df9b20;' href='https://console.cloud.google.com/'>Google Cloud Console</a> y crea un proyecto llamado <b>Syncdian</b>.<br>"
-            "2. En <b>Biblioteca de APIs</b>, busca y activa <b>Google Drive API</b>.<br>"
-            "3. En <b>Pantalla de consentimiento de OAuth</b>, elige 'Externo' y añade tu propio correo en 'Usuarios de prueba'.<br>"
-            "4. En <b>Credenciales</b>, pulsa <b>+ Crear credenciales</b> > <b>ID de cliente de OAuth</b> y selecciona tipo <b>App de escritorio</b>.<br>"
-            "5. Descarga el archivo JSON o copia tus claves, selecciona el archivo arriba y pulsa <b>Conectar</b>."
-        )
-        lbl_guide = QLabel(guide_text)
+        lbl_guide = QLabel(tr("gdrive_guide_steps"))
         lbl_guide.setOpenExternalLinks(True)
         lbl_guide.setWordWrap(True)
-        lbl_guide.setStyleSheet("color: #9c8e7e; font-size: 12px; line-height: 1.5;")
+        lbl_guide.setObjectName("settingDesc")
+        lbl_guide.setTextFormat(Qt.RichText)
         g_layout.addWidget(lbl_guide)
 
         self.content_layout.addWidget(guide_card)
@@ -215,9 +267,9 @@ class GoogleDriveTab(QWidget):
     def _browse_credentials_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleccionar credentials.json",
+            tr("gdrive_browse_json_title"),
             "",
-            "Archivos JSON (*.json);;Todos los archivos (*.*)"
+            tr("gdrive_json_filter")
         )
         if file_path:
             self.json_path_edit.setText(file_path)
@@ -225,7 +277,9 @@ class GoogleDriveTab(QWidget):
     def _auth_via_json(self):
         path = self.json_path_edit.text().strip()
         if not path or not Path(path).exists():
-            QMessageBox.warning(self, "Aviso", "Por favor selecciona un archivo credentials.json válido.")
+            QMessageBox.warning(
+                self, tr("gdrive_invalid_json_title"), tr("gdrive_invalid_json_msg")
+            )
             return
 
         self._start_auth("file", file_path=path)
@@ -234,7 +288,9 @@ class GoogleDriveTab(QWidget):
         cid = self.client_id_edit.text().strip()
         csec = self.client_secret_edit.text().strip()
         if not cid or not csec:
-            QMessageBox.warning(self, "Aviso", "Por favor ingresa Client ID y Client Secret.")
+            QMessageBox.warning(
+                self, tr("gdrive_missing_keys_title"), tr("gdrive_missing_keys_msg")
+            )
             return
 
         self.config_manager.google_drive.client_id = cid
@@ -245,8 +301,8 @@ class GoogleDriveTab(QWidget):
     def _start_auth(self, mode: str, **kwargs):
         QMessageBox.information(
             self,
-            "Autenticación con Google",
-            "Se abrirá tu navegador para que inicies sesión en Google y autorices a Syncdian."
+            tr("gdrive_auth_title"),
+            tr("gdrive_auth_msg")
         )
         self.auth_worker = AuthWorker(mode, **kwargs)
         self.auth_worker.auth_success.connect(self._on_success)
@@ -255,20 +311,35 @@ class GoogleDriveTab(QWidget):
 
     def _on_success(self, info: dict):
         email = info.get("email", "")
+        self._storage_info_cache = None
         self.config_manager.google_drive.user_email = email
         self.config_manager.google_drive.authenticated = True
         self.config_manager.save()
-        QMessageBox.information(self, "¡Conexión Exitosa!", f"Google Drive vinculado exitosamente con:\n{email}")
+        QMessageBox.information(
+            self,
+            tr("gdrive_auth_success_title"),
+            tr("gdrive_auth_success_msg", email=email)
+        )
         self.refresh_status_view()
         self.connection_changed.emit(True)
 
     def _on_failed(self, err: str):
-        QMessageBox.critical(self, "Error de Conexión", f"No se pudo completar la conexión:\n{err}")
+        QMessageBox.critical(
+            self,
+            tr("gdrive_auth_error_title"),
+            tr("gdrive_auth_error_msg", error=err)
+        )
 
     def _disconnect(self):
-        res = QMessageBox.question(self, "Desconectar", "¿Deseas desconectar tu cuenta de Google Drive?", QMessageBox.Yes | QMessageBox.No)
+        res = QMessageBox.question(
+            self,
+            tr("gdrive_disconnect_title"),
+            tr("gdrive_disconnect_msg"),
+            QMessageBox.Yes | QMessageBox.No
+        )
         if res == QMessageBox.Yes:
             self.gdrive.disconnect()
+            self._storage_info_cache = None
             self.config_manager.google_drive.authenticated = False
             self.config_manager.google_drive.user_email = ""
             self.config_manager.save()
@@ -276,8 +347,10 @@ class GoogleDriveTab(QWidget):
             self.connection_changed.emit(False)
 
     def _update_folder_name(self):
-        n = self.folder_name_edit.text().strip()
-        if n:
-            self.config_manager.google_drive.root_folder_name = n
+        name = self.folder_name_edit.text().strip()
+        if name:
+            self.config_manager.google_drive.root_folder_name = name
             self.config_manager.save()
-            QMessageBox.information(self, "Actualizado", "Nombre de carpeta destino guardado.")
+            QMessageBox.information(
+                self, tr("gdrive_updated_title"), tr("gdrive_folder_saved")
+            )

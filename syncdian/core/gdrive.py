@@ -13,6 +13,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 from syncdian.constants import TOKEN_FILE, CREDENTIALS_FILE, DRIVE_SCOPES
+from syncdian.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ class GoogleDriveService:
         usage_bytes = int(quota.get("usage", 0)) if quota.get("usage") else 0
 
         return {
-            "display_name": user.get("displayName", "Usuario"),
+            "display_name": user.get("displayName", tr("gdrive_user_default")),
             "email": user.get("emailAddress", ""),
             "avatar_url": user.get("photoLink", ""),
             "storage_usage_bytes": usage_bytes,

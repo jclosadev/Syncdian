@@ -32,11 +32,14 @@ class TestUI(unittest.TestCase):
         gdrive_btn = [btn for btn, idx, _, _ in window.nav_buttons if idx == 4][0]
         self.assertFalse(gdrive_btn.isHidden())
 
-        # Probar cambio de idioma
+        # Probar cambio de idioma (incluye retraducción instantánea de la barra lateral)
         window._on_language_changed("en")
         self.assertEqual(get_current_language(), "en")
+        about_btn = [btn for btn, idx, _, _ in window.nav_buttons if idx == 0][0]
+        self.assertEqual(about_btn.text(), "About")
         window._on_language_changed("es")
         self.assertEqual(get_current_language(), "es")
+        self.assertEqual(about_btn.text(), "Acerca De")
 
         window.quit_application()
 

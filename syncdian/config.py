@@ -53,6 +53,7 @@ class AppSettings:
     minimize_to_tray: bool = True
     start_minimized: bool = False
     notify_on_sync: bool = True
+    startup_check: bool = True
     exclude_patterns: List[str] = field(default_factory=lambda: list(DEFAULT_EXCLUSIONS))
 
 

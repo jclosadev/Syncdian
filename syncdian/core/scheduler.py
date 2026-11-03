@@ -8,6 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from syncdian.config import get_config
 from syncdian.constants import SCHEDULE_DAILY, SCHEDULE_INTERVAL
+from syncdian.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -88,12 +89,11 @@ class SchedulerService:
         next_dt = self.get_next_run_time()
         if not next_dt:
             if not self.config_manager.schedule.enabled:
-                return "Programación desactivada"
-            return "No programado"
+                return tr("dash_schedule_disabled")
+            return tr("dash_schedule_not_set")
 
         now = datetime.now(next_dt.tzinfo)
         if next_dt.date() == now.date():
-            return f"Hoy a las {next_dt.strftime('%H:%M')}"
-        else:
-            return next_dt.strftime("%d/%m/%Y a las %H:%M")
+            return tr("dash_next_today", time=next_dt.strftime("%H:%M"))
+        return tr("dash_next_date", date=next_dt.strftime("%d/%m/%Y"), time=next_dt.strftime("%H:%M"))
 
