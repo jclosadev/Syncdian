@@ -1,4 +1,6 @@
-# Syncdian 🚀
+# Syncdian
+![foto demo](https://imgur.com/a/zTcrWCa)
+
 ### Background Synchronizer from Obsidian to Google Drive
 
 **Syncdian** is a Windows desktop application designed to keep your **Obsidian** notes and vaults continuously, automatically, and securely backed up to **Google Drive**.
@@ -7,7 +9,7 @@ It runs silently in the background (in the System Tray next to the Windows clock
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 1. **Silent Background Service**:
    - Lives in the System Tray.
@@ -39,7 +41,7 @@ It runs silently in the background (in the System Tray next to the Windows clock
 
 ---
 
-## 🚀 How to Launch the Application
+## How to Launch the Application
 
 You can launch Syncdian directly using its executable or shortcut files:
 
@@ -85,7 +87,7 @@ To connect Syncdian with your Google Drive account, you need your free credentia
 
 ---
 
-## 📂 How to Restore a Backup
+## How to Restore a Backup
 
 1. In your Google Drive, you will find a folder named **`Syncdian Obsidian Backups`**.
 2. Inside, there will be a folder for each of your vaults.
